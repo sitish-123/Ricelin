@@ -13,7 +13,11 @@ cursor-style = block
 cursor-style-blink = false
 mouse-hide-while-typing = true
 
-copy-on-select = clipboard
+# "clipboard" makes every selection in the terminal overwrite the system
+# clipboard, so anything copied elsewhere is lost the moment a stray drag
+# selects text here. "true" sends selections to the primary selection
+# (middle-click paste) and leaves the clipboard alone.
+copy-on-select = true
 keybind = ctrl+v=paste_from_clipboard
 confirm-close-surface = false
 
