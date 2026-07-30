@@ -31,7 +31,7 @@ pcall(function()
 
     so.configure({
         gesture_distance = 300,  -- travel that counts as a full gesture
-        scale            = 0.5,  -- preferred overview scale
+        scale            = 0.35, -- preferred overview scale (valid 0.1 - 0.9)
         workspace_gap    = 100,
         layout           = "vertical",
         wallpaper        = 0,    -- 0: global only, 1: per-workspace, 2: both
