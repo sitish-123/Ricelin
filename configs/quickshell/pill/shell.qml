@@ -233,14 +233,21 @@ ShellRoot {
 
             readonly property real gameBarH: 34 * s
 
+            /**
+             * Floating hands the reserved strip back to windows. The band spans
+             * the full screen width even though the pill occupies a few hundred
+             * pixels in the middle, so reserving it wastes that whole row.
+             */
+            readonly property bool floating: Flags.pillFloat
+
             screen: modelData
             color: "transparent"
-            exclusionMode: ExclusionMode.Normal
-            exclusiveZone: Flags.gameMode ? gameBarH : reservedH
+            exclusionMode: floating ? ExclusionMode.Ignore : ExclusionMode.Normal
+            exclusiveZone: floating ? 0 : (Flags.gameMode ? gameBarH : reservedH)
             aboveWindows: true
 
             anchors { top: true; left: true; right: true }
-            implicitHeight: Flags.gameMode ? gameBarH : reservedH
+            implicitHeight: floating ? 1 : (Flags.gameMode ? gameBarH : reservedH)
 
             mask: emptyReserve
             Region { id: emptyReserve }
@@ -282,6 +289,37 @@ ShellRoot {
                 pill.pinned = false;
             }
 
+            /**
+             * Autohide. Only the resting pill retracts: an OSD, a toast, the game
+             * bar, a drag-over and every open surface set some other mode and must
+             * stay on screen. Retracting reuses the fullscreen path (translate off
+             * the top edge), and while hidden the input mask shrinks to a sliver at
+             * the top so the pointer can still reach up and bring it back without
+             * the pill eating clicks meant for the window underneath.
+             */
+            readonly property bool autoHideOn: Flags.pillAutoHide && Flags.pillFloat
+            readonly property bool wantHidden: autoHideOn && !monFullscreen
+                && pill.mode === "rest" && !pill.hovered && !pill.held && !surfaceOpen
+            property bool autoHidden: autoHideOn
+
+            onWantHiddenChanged: {
+                if (wantHidden) {
+                    hideDelay.restart();
+                } else {
+                    hideDelay.stop();
+                    autoHidden = false;
+                }
+            }
+
+            /** Grace period so brushing past the top edge does not flap the pill. */
+            Timer {
+                id: hideDelay
+                interval: 700
+                onTriggered: overlay.autoHidden = overlay.wantHidden
+            }
+
+            readonly property bool retracted: monFullscreen || autoHidden
+
             screen: modelData
             color: "transparent"
             exclusionMode: ExclusionMode.Ignore
@@ -291,15 +329,45 @@ ShellRoot {
 
             anchors { top: true; left: true; right: true; bottom: true }
 
-            mask: monFullscreen ? hiddenRegion : (modal ? fullRegion : pillRegion)
+            mask: monFullscreen ? hiddenRegion
+                : (modal ? fullRegion : (autoHidden ? revealRegion : pillRegion))
             Region { id: hiddenRegion }
+
+            /**
+             * The reveal sliver: a few pixels at the very top, only as wide as the
+             * pill, so moving the pointer to the top-centre brings the pill back
+             * while the rest of the top row still belongs to the window below.
+             */
+            Region {
+                id: revealRegion
+                x: pillRegion.x
+                y: 0
+                width: pillRegion.width
+                height: Math.max(4, Math.round(6 * overlay.s))
+            }
+
+            /**
+             * Sized from the morph *target*, not the live animated width. Binding
+             * to pill.width rebuilt the input region on every frame of a morph,
+             * which is a set_input_region + commit to the compositor 60 times a
+             * second for the whole 420ms. The target changes once per mode, so the
+             * region is now sent once per morph instead.
+             */
             Region {
                 id: pillRegion
-                readonly property real baseW: Math.max(pill.width, pill.targetW)
-                x: pill.x + (pill.width - baseW) / 2
-                y: pill.y
+                readonly property real baseW: Math.max(pill.targetW, pill.restW)
+                x: (overlay.width - baseW) / 2
+                /**
+                 * Starts at the screen edge, not at the pill. The reveal sliver
+                 * lives at y=0, so a region beginning at pill.y (below topGap)
+                 * would drop out from under the pointer the instant the pill
+                 * revealed: hover goes false, it retracts, the sliver returns
+                 * under the same pointer, and the pill flaps rest/hover forever.
+                 * Covering the gap keeps one continuous hover area.
+                 */
+                y: 0
                 width: baseW + pill.inputPadRight
-                height: Math.max(pill.height, pill.targetH)
+                height: pill.y + pill.targetH
             }
             Region {
                 id: fullRegion
@@ -436,7 +504,7 @@ ShellRoot {
                         }
                     }
                     transform: Translate {
-                        y: overlay.monFullscreen ? -(pill.height + overlay.topGap) : 0
+                        y: overlay.retracted ? -(pill.height + overlay.topGap) : 0
                         Behavior on y {
                             NumberAnimation {
                                 duration: Motion.morph

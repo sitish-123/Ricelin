@@ -31,6 +31,8 @@ Singleton {
     property alias pillBlur: adapter.pillBlur
     property alias topGap: adapter.topGap
     property alias appGap: adapter.appGap
+    property alias pillFloat: adapter.pillFloat
+    property alias pillAutoHide: adapter.pillAutoHide
     property alias recordCountdown: adapter.recordCountdown
     property alias recordDir: adapter.recordDir
     property alias recordFps: adapter.recordFps
@@ -92,6 +94,10 @@ Singleton {
             property real topGap: 1.0
             /** Pill-to-window band as a fraction of the shipped 12px. 0 tucks the windows flush under the pill. */
             property real appGap: 1.0
+            /** Float the pill over windows instead of reserving a band for it. The reserved strip spans the whole screen width even though the pill is small, so floating hands that row of pixels back to windows. */
+            property bool pillFloat: true
+            /** Retract the pill off the top edge until the pointer reaches the top of the screen. Only meaningful while floating. */
+            property bool pillAutoHide: true
             property int recordCountdown: 5
             property string recordDir: ""
             property int recordFps: 60
