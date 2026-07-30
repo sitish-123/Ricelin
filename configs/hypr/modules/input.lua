@@ -17,6 +17,15 @@ hl.config({
     binds = {
         scroll_event_delay = 40,
     },
+    gestures = {
+        -- Take the friction out of the workspace swipe. At the stock
+        -- cancel_ratio of 0.5 a swipe has to cover half the full distance
+        -- before it commits, and anything short of that springs back to where
+        -- it started -- that snap-back is the "sticky" feel.
+        workspace_swipe_cancel_ratio      = 0.15, -- commit early instead of snapping back
+        workspace_swipe_distance          = 150,  -- full swipe travel (was 300)
+        workspace_swipe_min_speed_to_force = 5,   -- a quick flick always commits (was 30)
+    },
 })
 
 -- ── Trackpad gestures ──────────────────────────────────────────────────────

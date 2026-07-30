@@ -30,7 +30,10 @@ pcall(function()
     if not so then return end -- not built for this Hyprland version; skip quietly
 
     so.configure({
-        gesture_distance = 300,    -- travel that counts as a full gesture
+        -- Travel that counts as a full gesture. Matches the native
+        -- workspace_swipe_distance in modules/input.lua so the overview swipe
+        -- and the workspace swipe need the same amount of finger movement.
+        gesture_distance = 150,
         scale            = 0.35,   -- preferred overview scale (valid 0.1 - 0.9)
         workspace_gap    = 60,     -- px between cards; tightened to suit scale 0.35
         layout           = "horizontal",
