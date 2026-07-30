@@ -35,6 +35,7 @@ DEPLOY_SET = [
     ("hypr",       "hypr",                                  "hypr"),
     ("quickshell", "quickshell",                            "quickshell"),
     ("ghostty",    "ghostty",                               "ghostty"),
+    ("kitty",      "kitty",                                 "kitty"),
     ("fish",       "fish",                                  "fish"),
     ("fastfetch",  "fastfetch",                             "fastfetch"),
     ("kdeglobals", "kde/kdeglobals",                        "kdeglobals"),

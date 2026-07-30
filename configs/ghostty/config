@@ -13,12 +13,14 @@ cursor-style = block
 cursor-style-blink = false
 mouse-hide-while-typing = true
 
-# "clipboard" makes every selection in the terminal overwrite the system
-# clipboard, so anything copied elsewhere is lost the moment a stray drag
-# selects text here. "true" sends selections to the primary selection
-# (middle-click paste) and leaves the clipboard alone.
-copy-on-select = true
-keybind = ctrl+v=paste_from_clipboard
+copy-on-select = clipboard
+
+# Paste lives on ctrl+shift+v, not ctrl+v. Binding ctrl+v here makes Ghostty
+# swallow the keypress and paste the clipboard as *text*, so a TUI that reads
+# the clipboard itself never sees ctrl+v -- which breaks pasting images into
+# Claude Code (an image has no text form, so nothing arrives). Kitty leaves
+# ctrl+v alone, which is why it works there.
+keybind = ctrl+shift+v=paste_from_clipboard
 confirm-close-surface = false
 
 # Warm Ricelin default theme. The wallpaper picker writes a matching

@@ -172,6 +172,28 @@ def main():
     for i in range(16):
         lines.append(f'palette = {i}={b["base%02x" % i]}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
+
+    # Same palette in kitty's syntax. kitty.conf includes this file, and kitty
+    # re-reads its whole config on SIGUSR1, so a wallpaper change recolours
+    # every open window without restarting anything.
+    klines = [
+        f'background {b["base00"]}',
+        f'foreground {b["base07"]}',
+        f'cursor {pill["primary"]}',
+        f'selection_background {b["base02"]}',
+        f'selection_foreground {b["base07"]}',
+    ]
+    for i in range(16):
+        klines.append(f'color{i} {b["base%02x" % i]}')
+    (CACHE / "kitty-colors.conf").write_text("\n".join(klines) + "\n")
+
+    # Best-effort: no kitty running (or no pkill) is not an error.
+    try:
+        subprocess.run(["pkill", "-USR1", "-x", "kitty"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass
+
     return 0
 
 

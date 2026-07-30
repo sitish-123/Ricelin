@@ -35,15 +35,15 @@ local function zoom(step)
 end
 
 -- ── Apps ───────────────────────────────────────────────────────────────────
-hl.bind(mod .. " + Return",     hl.dsp.exec_cmd("ghostty"))
-hl.bind(mod .. " + T",          hl.dsp.exec_cmd("ghostty"))
-hl.bind("CTRL + ALT + T",       hl.dsp.exec_cmd("ghostty"))
-hl.bind(mod .. " + E",          hl.dsp.exec_cmd(launch("dolphin", "nautilus", "nemo", "thunar", "ghostty -e yazi")))
-hl.bind(mod .. " + W",          hl.dsp.exec_cmd(launch("helium-browser", "chromium", "brave", "firefox")))
-hl.bind(mod .. " + C",          hl.dsp.exec_cmd(launch("windsurf", "code", "codium", "cursor", "zed", "kate", "ghostty -e micro")))
-hl.bind(mod .. " + X",          hl.dsp.exec_cmd(launch("kate", "gnome-text-editor", "ghostty -e micro")))
+hl.bind(mod .. " + Return",     hl.dsp.exec_cmd("kitty"))
+hl.bind(mod .. " + T",          hl.dsp.exec_cmd("kitty"))
+hl.bind("CTRL + ALT + T",       hl.dsp.exec_cmd("kitty"))
+hl.bind(mod .. " + E",          hl.dsp.exec_cmd(launch("dolphin", "nautilus", "nemo", "thunar", "kitty -e yazi")))
+hl.bind(mod .. " + W",          hl.dsp.exec_cmd(launch("zen", "zen-browser", "helium-browser", "chromium", "brave", "firefox")))
+hl.bind(mod .. " + C",          hl.dsp.exec_cmd(launch("windsurf", "code", "codium", "cursor", "zed", "kate", "kitty -e micro")))
+hl.bind(mod .. " + X",          hl.dsp.exec_cmd(launch("kate", "gnome-text-editor", "kitty -e micro")))
 hl.bind("CTRL + " .. mod .. " + V",   hl.dsp.exec_cmd(launch("pavucontrol-qt", "pavucontrol")))
-hl.bind("CTRL + SHIFT + Escape",      hl.dsp.exec_cmd(launch("plasma-systemmonitor", "gnome-system-monitor", "ghostty -e btop")))
+hl.bind("CTRL + SHIFT + Escape",      hl.dsp.exec_cmd(launch("plasma-systemmonitor", "gnome-system-monitor", "kitty -e btop")))
 
 -- ── Windows ────────────────────────────────────────────────────────────────
 hl.bind(mod .. " + Q",               hl.dsp.window.close())
