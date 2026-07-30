@@ -30,11 +30,11 @@ pcall(function()
     if not so then return end -- not built for this Hyprland version; skip quietly
 
     so.configure({
-        gesture_distance = 300,  -- travel that counts as a full gesture
-        scale            = 0.35, -- preferred overview scale (valid 0.1 - 0.9)
-        workspace_gap    = 100,
-        layout           = "vertical",
-        wallpaper        = 0,    -- 0: global only, 1: per-workspace, 2: both
+        gesture_distance = 300,    -- travel that counts as a full gesture
+        scale            = 0.35,   -- preferred overview scale (valid 0.1 - 0.9)
+        workspace_gap    = 60,     -- px between cards; tightened to suit scale 0.35
+        layout           = "horizontal",
+        wallpaper        = 0,      -- 0: global only, 1: per-workspace, 2: both
         blur             = false,
 
         shadow = {
@@ -42,6 +42,20 @@ pcall(function()
             range         = 50,
             render_power  = 3,
             color         = 0xee1a1a1a,
+        },
+
+        input = {
+            -- 0: layout-aware, 1: inverted, 2: vert=workspace/horiz=columns,
+            -- 3: vert=columns/horiz=workspace
+            scrolling_mode         = 0,
+            -- 0: main button drags windows, middle pans; 1: the reverse
+            drag_mode              = 0,
+            -- 0: normal, 1: swap left/right mouse buttons inside the overview.
+            -- Was live at 2, which the plugin does not define; pinned to 0.
+            left_handed            = 0,
+            touchpad_scroll_factor = 1.5, -- less finger travel per workspace
+            drag_threshold         = 4,   -- px before a press counts as a drag
+            scroll_event_delay     = 120, -- ms debounce between scroll events
         },
     })
 
