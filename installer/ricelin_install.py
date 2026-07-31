@@ -427,6 +427,87 @@ def link_ricelin_cli(dry):
     return True, "", True
 
 
+# Hyprland plugins the rice expects, as (hyprpm repo name, git URL, plugins to enable).
+# The repo name is what `hyprpm list` prints, and is how this stays idempotent.
+HYPR_PLUGINS = (
+    # Fork of yayuuu/hyprland-scroll-overview. Adds the `navigate` trackpad gesture
+    # (continuous carousel while the overview is open, a normal workspace swipe when it is
+    # not), drag-to-insert between/around cards, and fixes for card previews and animation
+    # frames. modules/plugins.lua registers that gesture, and stock scrolloverview rejects
+    # it, so the fork is not optional for the shipped config.
+    ("hyprland-scroll-overview", "https://github.com/sitish-kumar/hyprland-scroll-overview",
+     ("scrolloverview",)),
+)
+
+
+def setup_hypr_plugins(dry):
+    """
+    Add and enable the Hyprland plugins through hyprpm, idempotently.
+
+    hyprpm builds each plugin against the running Hyprland's headers, so this belongs after
+    the packages are in and after the configs are deployed: modules/autostart.lua loads
+    whatever hyprpm has enabled (`hyprpm reload -n`) on the next login, and
+    modules/plugins.lua configures the plugin and registers its gesture.
+
+    Returns (ok, detail, notes). Never fatal: a machine without hyprpm, or an offline one,
+    still gets a working rice with the overview simply absent.
+    """
+    if not shutil.which("hyprpm"):
+        return True, "", ["hyprpm is not installed, so the Hyprland plugins were skipped. "
+                          "Install hyprland's hyprpm, then run: ricelin plugins"]
+
+    manual = ("Set up the Hyprland plugins yourself: hyprpm update && "
+              + " && ".join(f"hyprpm add {url}" for _, url, _ in HYPR_PLUGINS)
+              + " && " + " && ".join(f"hyprpm enable {p}" for _, _, ps in HYPR_PLUGINS for p in ps))
+
+    notes = []
+    if dry:
+        for name, url, plugins in HYPR_PLUGINS:
+            print(f"  would add hyprpm repo: {name} ({url})")
+            for plugin in plugins:
+                print(f"  would enable plugin: {plugin}")
+        return True, "", notes
+
+    # hyprpm escalates itself to write /var/cache/hyprpm. On a full install the sudo
+    # timestamp is already warm from the package step, but a config-only run (--no-deps)
+    # has never asked for it, and a `curl | bash` pipeline has no terminal to prompt on --
+    # so check first and leave instructions rather than hanging or failing the install.
+    try:
+        warm = subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0
+    except OSError:
+        warm = False
+    if not warm:
+        return True, "", [manual + " (skipped: it needs sudo and none was requested this run)"]
+
+    # `hyprpm update` fetches the headers for the running Hyprland. Without them a fresh
+    # machine has nothing to build against and every add fails the ABI check.
+    ok, detail = _run(["hyprpm", "update"], dry)
+    if not ok:
+        return True, "", [f"hyprpm update failed ({detail}). " + manual]
+
+    try:
+        listed = subprocess.run(["hyprpm", "list"], capture_output=True, text=True).stdout
+    except OSError as exc:
+        return False, f"{exc}: hyprpm list", notes
+
+    for name, url, plugins in HYPR_PLUGINS:
+        if name not in listed:
+            # hyprpm asks for confirmation before cloning and building third-party code.
+            # Answer it non-interactively: this is a pinned repo the rice ships, and the
+            # installer has no terminal to prompt on under `curl | bash`.
+            ok, detail = _shell(f"yes | hyprpm add {shlex.quote(url)}", dry)
+            if not ok:
+                return True, "", [f"Could not add {name} ({detail}). " + manual]
+        for plugin in plugins:
+            ok, detail = _run(["hyprpm", "enable", plugin], dry)
+            if not ok:
+                return True, "", [f"Could not enable {plugin} ({detail}). " + manual]
+
+    notes.append("Hyprland plugins are enabled via hyprpm; they load on the next login. "
+                 "To load them now: hyprpm reload -n")
+    return True, "", notes
+
+
 def deploy_brave_theme(source, dry):
     """
     Copy the bundled Brave theme into ~/.config/ricelin so the user can point
@@ -787,6 +868,15 @@ def run(args):
         if linked:
             notes.append("Linked the ricelin CLI into ~/.local/bin. With it on PATH "
                          "you can run: ricelin status, ricelin restart, ricelin update.")
+
+        # k3. Hyprland plugins, after the configs are down: the deployed
+        #     modules/plugins.lua configures scrolloverview and registers its `navigate`
+        #     gesture, which only the fork accepts.
+        ok, detail, plugin_notes = setup_hypr_plugins(dry)
+        record(ok, detail, "Set up Hyprland plugins",
+               "Run: hyprpm update && hyprpm add https://github.com/sitish-kumar/hyprland-scroll-overview "
+               "&& hyprpm enable scrolloverview")
+        notes.extend(plugin_notes)
 
         # l. seed a starter wallpaper so the first boot has a background, a
         #    populated picker and a palette to render.
