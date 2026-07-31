@@ -46,6 +46,7 @@ Singleton {
     property alias idleSuspendMin: adapter.idleSuspendMin
     property alias weatherCity: adapter.weatherCity
     property alias musicViz: adapter.musicViz
+    property alias workspaceOsd: adapter.workspaceOsd
     property alias gameMode: adapter.gameMode
     property alias gamePrevDnd: adapter.gamePrevDnd
     property alias gamePrevViz: adapter.gamePrevViz
@@ -111,6 +112,8 @@ Singleton {
             property int idleSuspendMin: 0
             property string weatherCity: ""
             property bool musicViz: true
+            /** Morph the pill open for ~1.8s on every workspace switch. Off by default: switching is already the most frequent thing you do, and the OSD holds the pill in its expanded state long enough to fight a hover aimed at something else. */
+            property bool workspaceOsd: false
             property bool gameMode: false
             property bool gamePrevDnd: false
             property bool gamePrevViz: true

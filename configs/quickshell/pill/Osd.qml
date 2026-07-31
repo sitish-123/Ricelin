@@ -59,6 +59,11 @@ Item {
      * swallows the initial populate, so login doesn't flash. Skipped while the
      * pill is expanded: the hover/surface pill already shows the live dots with
      * the active one marked, so the OSD would only be a redundant morph.
+     *
+     * Off unless `workspaceOsd` is set. Workspace switching is the highest-rate
+     * action there is, and each flash parks the pill in its expanded OSD mode for
+     * 1.8s — long enough that a hover aimed at the clock or tray right after a
+     * switch reads as unresponsive.
      */
     readonly property string activeWsName: {
         var mons = Hyprland.monitors.values;
@@ -67,7 +72,7 @@ Item {
                 return mons[i].activeWorkspace ? mons[i].activeWorkspace.name : "";
         return "";
     }
-    onActiveWsNameChanged: if (activeWsName.length > 0 && !expanded) flash("workspace");
+    onActiveWsNameChanged: if (Flags.workspaceOsd && activeWsName.length > 0 && !expanded) flash("workspace");
 
     /**
      * Wait for the track to settle before flashing. Hovering the YouTube grid

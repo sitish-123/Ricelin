@@ -239,12 +239,20 @@ Item {
         fontpicker: { size: () => Qt.size(fontpickerW, surfaceItem(ldFontpicker).implicitHeight + 29 * s), ame: () => surfaceItem(ldFontpicker) }
     })
 
+    /**
+     * `hoverLatch` outranks the OSD: a flash holds the pill in osd mode for a fixed
+     * 1.8s, and reaching for the pill during that window used to do nothing until
+     * the timer expired. A deliberate hover is a stronger signal than an ambient
+     * flash, so it wins immediately and the flash resumes once the pointer leaves.
+     * Toast keeps its priority — its content is clickable, so a hover is usually a
+     * reach for the notification itself, not past it.
+     */
     readonly property string mode: dragActive ? "dragOver"
         : (surfaceOpen && surfaces[surface] !== undefined ? surface
         : (Flags.gameMode ? "game"
         : (quickChoosing ? "quickChoose"
         : (quickCounting ? "quickCount"
-        : (osdActive && !held ? "osd"
+        : (osdActive && !held && !hoverLatch ? "osd"
         : (toastActive && !held ? "toast"
         : (expanded ? "hover" : "rest")))))))
 
