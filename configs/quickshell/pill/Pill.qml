@@ -641,8 +641,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: opacity > 0.01
         opacity: shown ? 1 : 0
-        border.width: 1
-        border.color: Theme.border
         gradient: Gradient {
             GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
             GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
@@ -704,8 +702,6 @@ Item {
         topRightRadius: pill.morphRadius * (1 - gameFlat)
         bottomLeftRadius: pill.morphRadius * (1 - gameFlat)
         bottomRightRadius: pill.morphRadius * (1 - gameFlat)
-        border.width: 1
-        border.color: Theme.border
         gradient: Gradient {
             GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
             GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
