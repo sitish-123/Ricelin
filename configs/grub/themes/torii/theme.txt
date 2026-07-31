@@ -7,6 +7,23 @@ title-text: ""
 message-color: "#ead9cf"
 message-bg-color: "#00000000"
 
+# --- terminal region ---
+# Required, not cosmetic. Selecting an entry runs its `echo 'Loading Linux ...'`
+# lines, and with a theme active GRUB takes the terminal's font and geometry
+# from the theme. Without these the menu has nowhere to draw that text: pressing
+# Enter hangs and eventually falls back to the bare GRUB console, while letting
+# the countdown expire boots fine because it never re-enters the menu loop.
+# The stock CachyOS theme declares the same block; torii shipped without it.
+#
+# Unifont comes from /boot/grub/fonts/unicode.pf2, which GRUB always loads, so
+# this needs no extra font file in the theme directory.
+terminal-font: "Unifont Regular 16"
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
 # --- Japanese title ---
 + label {
     left   = 6%
