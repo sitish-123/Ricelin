@@ -305,10 +305,17 @@ ShellRoot {
                 }
             }
 
-            /** Grace period so brushing past the top edge does not flap the pill. */
+            /**
+             * Grace period so brushing past the top edge does not flap the pill.
+             * Stacked on top of the hover latch and the collapse morph, though:
+             * the full unhover-to-retracted chain measured 140 + 260 + 700 + the
+             * retract animation, which reads as the pill hanging around for the
+             * better part of two seconds. 450ms still damps a pointer hunting
+             * around the reveal sliver.
+             */
             Timer {
                 id: hideDelay
-                interval: 700
+                interval: 450
                 onTriggered: overlay.autoHidden = overlay.wantHidden
             }
 

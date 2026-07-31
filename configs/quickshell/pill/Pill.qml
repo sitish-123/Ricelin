@@ -823,9 +823,21 @@ Item {
         }
     }
 
+    /**
+     * Debounce so a pointer clipping the edge of the pill does not drop the
+     * latch mid-stride. It is pure dead time -- the pill sits fully expanded
+     * doing nothing until it fires -- and it is *serial* with the collapse
+     * morph, so it lands directly on the perceived latency: measured, unhover to
+     * fully collapsed was 300ms here plus 260ms of glide. 140ms still absorbs a
+     * brush-past while halving the wait.
+     *
+     * The re-arm below is a settle guard for surfaces whose target geometry is
+     * still animating when the timer lands; it does not fire on a plain
+     * hover-to-rest hop, where the pill is already settled at hoverW/hoverH.
+     */
     Timer {
         id: graceTimer
-        interval: 300
+        interval: 140
         onTriggered: {
             if (pill.morphCloseness < 0.95) {
                 graceTimer.restart();
