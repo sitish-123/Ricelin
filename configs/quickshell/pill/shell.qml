@@ -219,11 +219,10 @@ ShellRoot {
             id: reserve
             required property var modelData
             readonly property real s: modelData ? (modelData.height / 1080) * Flags.uiScale : 1
-            readonly property real topGap: 8 * Flags.topGap * s
             readonly property real restHeight: 38 * s
 
-            /** Trimming the reserved band below the pill's bottom lets windows climb, so App gap sets the pill-to-window air without touching the desktop gaps_out. */
-            readonly property real reservedH: Math.max(0, restHeight + topGap - 12 * (1 - Flags.appGap) * s)
+            /** Trimming the reserved band below the notch's bottom lets windows climb, so App gap sets the notch-to-window air without touching the desktop gaps_out. */
+            readonly property real reservedH: Math.max(0, restHeight - 12 * (1 - Flags.appGap) * s)
 
             readonly property real gameBarH: 34 * s
 
@@ -255,7 +254,6 @@ ShellRoot {
             id: overlay
             required property var modelData
             readonly property real s: modelData ? (modelData.height / 1080) * Flags.uiScale : 1
-            readonly property real topGap: 8 * Flags.topGap * s
             readonly property string surface: root.openMon === modelData.name ? root.openSurface : ""
             readonly property bool surfaceOpen: surface.length > 0
             readonly property bool modal: pill.authPending ? false : (surfaceOpen || pill.held || pill.quickChoosing)
@@ -357,18 +355,15 @@ ShellRoot {
             Region {
                 id: pillRegion
                 readonly property real baseW: Math.max(pill.targetW, pill.restW)
-                x: (overlay.width - baseW) / 2
                 /**
-                 * Starts at the screen edge, not at the pill. The reveal sliver
-                 * lives at y=0, so a region beginning at pill.y (below topGap)
-                 * would drop out from under the pointer the instant the pill
-                 * revealed: hover goes false, it retracts, the sliver returns
-                 * under the same pointer, and the pill flaps rest/hover forever.
-                 * Covering the gap keeps one continuous hover area.
+                 * Widened by a shoulder either side. They are drawn outside the
+                 * body's own width, so without this the pointer crossing one
+                 * would read as leaving the notch and start the collapse.
                  */
+                x: (overlay.width - baseW) / 2 - pill.shoulder
                 y: 0
-                width: baseW + pill.inputPadRight
-                height: pill.y + pill.targetH
+                width: baseW + 2 * pill.shoulder + pill.inputPadRight
+                height: pill.targetH
             }
             Region {
                 id: fullRegion
@@ -480,16 +475,9 @@ ShellRoot {
                 Pill {
                     id: pill
                     anchors.top: parent.top
-                    anchors.topMargin: pill.mode === "game" ? 0 : overlay.topGap
+                    /** Welded to the screen edge in every mode -- that is what makes it a notch. */
+                    anchors.topMargin: 0
                     anchors.horizontalCenter: parent.horizontalCenter
-
-                    Behavior on anchors.topMargin {
-                        NumberAnimation {
-                            duration: Motion.morph
-                            easing.type: Motion.easeMorph
-                            easing.bezierCurve: Motion.morphCurve
-                        }
-                    }
                     s: overlay.s
                     screenName: overlay.modelData.name
                     barWindow: overlay
@@ -505,7 +493,7 @@ ShellRoot {
                         }
                     }
                     transform: Translate {
-                        y: overlay.retracted ? -(pill.height + overlay.topGap) : 0
+                        y: overlay.retracted ? -pill.height : 0
                         Behavior on y {
                             NumberAnimation {
                                 duration: Motion.morph
