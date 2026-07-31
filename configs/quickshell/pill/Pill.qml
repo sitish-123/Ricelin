@@ -187,17 +187,6 @@ Item {
     readonly property real openCorner: 22 * s
 
     /**
-     * Notch geometry. The body hangs flush off the top edge, so only the bottom
-     * corners round; the top ones stay square and the shoulders either side do
-     * the work of blending into the bezel.
-     *
-     * The shoulder is capped at half the body height. Past that the quarter
-     * circle is taller than the notch it is joining and the curve visibly
-     * overshoots the bottom corner instead of meeting the side cleanly.
-     */
-    readonly property real shoulder: Math.min(14 * s * Flags.notchShoulder, height / 2)
-
-    /**
      * Latch-once lazy load. Every surface sleeps in an inactive Loader until its
      * first open; the size and ame thunks below resolve items through here. The
      * ordering is the trick: flip `active` before any read of the loader, so the
@@ -699,21 +688,28 @@ Item {
         }
     }
 
-    Item {
+    Rectangle {
         id: body
         anchors.fill: parent
 
         /**
          * Corner flatness rides the morph curve so docking into the game bar
          * squares the corners as one continuous shape change instead of a snap.
-         * At 1 both the bottom radius and the shoulders go to zero, leaving the
-         * plain full-width bar.
          */
         property real gameFlat: pill.mode === "game" ? 1 : 0
         Behavior on gameFlat { NumberAnimation { duration: Motion.morph; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve } }
 
-        readonly property real radius: pill.morphRadius * (1 - gameFlat)
-        readonly property real sh: pill.shoulder * (1 - gameFlat)
+        radius: pill.morphRadius
+        topLeftRadius: pill.morphRadius * (1 - gameFlat)
+        topRightRadius: pill.morphRadius * (1 - gameFlat)
+        bottomLeftRadius: pill.morphRadius * (1 - gameFlat)
+        bottomRightRadius: pill.morphRadius * (1 - gameFlat)
+        border.width: 1
+        border.color: Theme.border
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
+            GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
+        }
 
         layer.enabled: !pill.morphing
         layer.effect: MultiEffect {
@@ -721,91 +717,6 @@ Item {
             shadowColor: Qt.rgba(0, 0, 0, Theme.shadowOpacity)
             shadowBlur: 0.7
             shadowVerticalOffset: 3 * pill.s
-        }
-
-        /**
-         * The whole notch as a single closed outline: shoulder, side, bottom
-         * corner, bottom, bottom corner, side, shoulder, then back along the
-         * screen edge.
-         *
-         * It is one path on purpose. Drawing the body as a Rectangle with two
-         * shoulder Shapes beside it read as three pieces butted together --
-         * each carried its own 1px border, so the join showed as a hard vertical
-         * line exactly where the eye expects the curve to flow. One path makes
-         * the fill and the stroke continuous by construction, with no seam to
-         * hide.
-         *
-         * Arcs are PathAngleArc rather than PathArc so the sweep direction is
-         * explicit: a concave shoulder cannot silently flip convex when the
-         * radius animates through a degenerate value.
-         *
-         * The shoulder arcs are centred level with their own bottom, which
-         * leaves them tangent to the screen edge at one end and tangent to the
-         * notch side at the other. Any other centre puts a visible kink at both
-         * joins.
-         */
-        Shape {
-            id: outline
-            x: -body.sh
-            y: 0
-            width: pill.width + 2 * body.sh
-            height: pill.height
-            preferredRendererType: Shape.CurveRenderer
-
-            readonly property real sh: body.sh
-            readonly property real w: pill.width
-            readonly property real h: pill.height
-            readonly property real r: Math.max(0, Math.min(body.radius, outline.w / 2, outline.h - outline.sh))
-
-            ShapePath {
-                strokeWidth: 1
-                strokeColor: Theme.border
-                joinStyle: ShapePath.RoundJoin
-
-                fillGradient: LinearGradient {
-                    x1: 0; y1: 0
-                    x2: 0; y2: outline.h
-                    GradientStop { position: 0.0; color: Qt.alpha(Theme.cardTop, Flags.pillOpacity) }
-                    GradientStop { position: 1.0; color: Qt.alpha(Theme.cardBot, Flags.pillOpacity) }
-                }
-
-                startX: 0
-                startY: 0
-
-                // Left shoulder: screen edge -> notch side, concave.
-                PathAngleArc {
-                    moveToStart: false
-                    centerX: 0; centerY: outline.sh
-                    radiusX: outline.sh; radiusY: outline.sh
-                    startAngle: -90; sweepAngle: 90
-                }
-                PathLine { x: outline.sh; y: outline.h - outline.r }
-                // Bottom-left corner, convex.
-                PathAngleArc {
-                    moveToStart: false
-                    centerX: outline.sh + outline.r; centerY: outline.h - outline.r
-                    radiusX: outline.r; radiusY: outline.r
-                    startAngle: 180; sweepAngle: -90
-                }
-                PathLine { x: outline.sh + outline.w - outline.r; y: outline.h }
-                // Bottom-right corner, convex.
-                PathAngleArc {
-                    moveToStart: false
-                    centerX: outline.sh + outline.w - outline.r; centerY: outline.h - outline.r
-                    radiusX: outline.r; radiusY: outline.r
-                    startAngle: 90; sweepAngle: -90
-                }
-                PathLine { x: outline.sh + outline.w; y: outline.sh }
-                // Right shoulder: notch side -> screen edge, concave.
-                PathAngleArc {
-                    moveToStart: false
-                    centerX: 2 * outline.sh + outline.w; centerY: outline.sh
-                    radiusX: outline.sh; radiusY: outline.sh
-                    startAngle: 180; sweepAngle: 90
-                }
-                // Back along the screen edge.
-                PathLine { x: 0; y: 0 }
-            }
         }
 
         Rectangle {

@@ -68,7 +68,7 @@ SettingsSurface {
             r.push({ item: opInactRow, kind: "scrub", bump: function (d) { opInactScrub.bump(d); } });
         }
         if (pillGrp.open) {
-            r.push({ item: notchShoulderRow, kind: "scrub", bump: function (d) { notchShoulderScrub.bump(d); } });
+            r.push({ item: pillGapRow, kind: "scrub", bump: function (d) { pillGapScrub.bump(d); } });
             r.push({ item: appGapRow, kind: "scrub", bump: function (d) { appGapScrub.bump(d); } });
             r.push({ item: pillOpRow, kind: "scrub", bump: function (d) { pillOpScrub.bump(d); } });
             r.push({ item: pillBlurRow, kind: "toggle", get: function () { return Flags.pillBlur; }, set: function (v) { Flags.pillBlur = v; root.applyPillBlur(v); } });
@@ -181,7 +181,7 @@ SettingsSurface {
             activeOpacity: root.activeOpacity,
             inactiveOpacity: root.inactiveOpacity,
             pillOpacity: Flags.pillOpacity,
-            notchShoulder: Flags.notchShoulder,
+            topGap: Flags.topGap,
             appGap: Flags.appGap,
             nlTemp: Flags.nightLightTemp,
             nlOnMin: Flags.nightLightOnMin,
@@ -855,16 +855,16 @@ SettingsSurface {
             Group { id: pillGrp; title: "Pill"
 
             FieldRow {
-                id: notchShoulderRow
-                label: "Notch shoulder"
-                caption: "How far the notch curves out into the screen edge. 0 squares it into a plain tab."
+                id: pillGapRow
+                label: "Pill gap"
+                caption: "Space above the pill. Lower pulls windows up with it."
                 ScrubValue {
-                    id: notchShoulderScrub
+                    id: pillGapScrub
                     s: root.s
-                    value: Flags.notchShoulder
-                    openValue: root.base.notchShoulder
+                    value: Flags.topGap
+                    openValue: root.base.topGap
                     from: 0; to: 2; step: 0.1; decimals: 1
-                    onEdited: v => Flags.notchShoulder = v
+                    onEdited: v => Flags.topGap = v
                 }
             }
 
