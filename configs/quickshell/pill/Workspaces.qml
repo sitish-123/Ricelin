@@ -27,7 +27,17 @@ Item {
     property real dotW: 5 * s
     property real gap: 4 * s
 
-    readonly property var range: {
+    /**
+     * The ids the strip draws, recomputed whenever the rules, this monitor's
+     * workspaces or the active one change -- but only *published* to `range` when
+     * the ids actually differ. A Repeater backed by a JS array resets its whole
+     * model on any reassignment, and `activeName` is an input here, so binding
+     * `range` directly rebuilt every dot delegate on every single workspace
+     * switch: hover state was lost, and the active dot's width Behavior never
+     * ran because a freshly built delegate starts life already at its target
+     * width, so the stick snapped wide instead of growing into place.
+     */
+    readonly property var rangeCandidate: {
         var out = [];
         var seen = ({});
         var ruled = Workspacerules.byMonitor[screenName];
@@ -54,6 +64,26 @@ Item {
         out.sort(function (x, y) { return x - y; });
         return out;
     }
+
+    property var range: []
+
+    function publishRange() {
+        var a = rangeCandidate;
+        var b = range;
+        if (a.length !== b.length) {
+            range = a;
+            return;
+        }
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                range = a;
+                return;
+            }
+        }
+    }
+
+    onRangeCandidateChanged: publishRange()
+    Component.onCompleted: publishRange()
 
     readonly property string activeName: {
         var mons = Hyprland.monitors.values;

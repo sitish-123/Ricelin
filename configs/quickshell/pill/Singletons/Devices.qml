@@ -98,7 +98,8 @@ Singleton {
 
     Process {
         id: ddcDetect
-        command: ["ddcutil", "detect", "--brief"]
+        /** Guarded: ddcutil is an optional dep (external DDC monitors only). Spawning it bare logged a failed-to-start warning on every refresh on machines without it. */
+        command: ["sh", "-c", "command -v ddcutil >/dev/null 2>&1 || exit 0; ddcutil detect --brief"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
