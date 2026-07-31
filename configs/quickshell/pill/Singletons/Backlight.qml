@@ -4,10 +4,15 @@ import Quickshell
 import Quickshell.Io
 
 /**
- * One shared poller for the internal laptop backlight. Every pill carries an
- * Osd, so watching /sys here keeps it a single loop instead of one per monitor.
- * `changed` fires on a new reading after the initial populate, so login doesn't
- * flash the OSD; the loop exits at once on machines without a backlight.
+ * One shared watcher for the internal laptop backlight. Every pill carries an
+ * Osd, so watching /sys here keeps it a single process instead of one per
+ * monitor. `changed` fires on a new reading after the initial populate, so login
+ * doesn't flash the OSD; the watcher exits at once on machines without a
+ * backlight.
+ *
+ * The helper blocks in poll(2) on the sysfs attribute rather than re-reading it
+ * on a timer, so a brightness key now flashes the OSD immediately instead of up
+ * to a second later, and the shell stops paying three forks a second for it.
  */
 Singleton {
     id: root
@@ -19,7 +24,7 @@ Singleton {
     signal changed()
 
     Process {
-        command: ["sh", "-c", "dev=$(ls /sys/class/backlight 2>/dev/null | head -n1); [ -n \"$dev\" ] || exit 0; max=$(cat /sys/class/backlight/$dev/max_brightness); last=\"\"; while true; do val=$(cat /sys/class/backlight/$dev/brightness); if [ \"$val\" != \"$last\" ]; then echo \"$(( val * 100 / max ))\"; last=\"$val\"; fi; sleep 1; done"]
+        command: ["python3", Quickshell.env("HOME") + "/.config/hypr/scripts/backlight-watch.py"]
         running: true
         stdout: SplitParser {
             onRead: (line) => {
