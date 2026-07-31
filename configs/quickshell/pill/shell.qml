@@ -261,18 +261,41 @@ ShellRoot {
             readonly property bool modal: pill.authPending ? false : (surfaceOpen || pill.held || pill.quickChoosing)
 
             /**
-             * True while this monitor's active workspace reports a fullscreen
-             * client. The pill then retracts off the top edge and the whole
-             * layer becomes click-through so fullscreen content owns the screen.
+             * True while this monitor's active workspace has a REAL fullscreen client. The
+             * pill then retracts off the top edge and the whole layer becomes click-through
+             * so fullscreen content owns the screen.
+             *
+             * The workspace's `hasfullscreen` alone is not that test: Hyprland reports it
+             * for a MAXIMIZED window too (fullscreen mode 1), so SUPER+D used to retract the
+             * pill and go click-through even though a maximized window is only 1906x1186 and
+             * never covers the bar. Confirm the mode from the toplevel: 2 is fullscreen,
+             * 1 is maximized.
              */
             readonly property bool monFullscreen: {
                 var mons = Hyprland.monitors.values;
+                var ws = null;
                 for (var i = 0; i < mons.length; i++) {
                     if (mons[i].name === modelData.name) {
-                        var ws = mons[i].activeWorkspace;
-                        var o = ws ? ws.lastIpcObject : null;
-                        return o ? !!o.hasfullscreen : false;
+                        ws = mons[i].activeWorkspace;
+                        break;
                     }
+                }
+                if (!ws)
+                    return false;
+
+                // cheap gate first: nothing fullscreen OR maximized here
+                var o = ws.lastIpcObject;
+                if (!o || !o.hasfullscreen)
+                    return false;
+
+                var tl = Hyprland.toplevels.values;
+                for (var j = 0; j < tl.length; j++) {
+                    var t = tl[j];
+                    if (!t || !t.workspace || t.workspace.id !== ws.id)
+                        continue;
+                    var io = t.lastIpcObject;
+                    if (io && io.fullscreen === 2)
+                        return true;
                 }
                 return false;
             }
