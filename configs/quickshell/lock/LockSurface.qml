@@ -20,7 +20,15 @@ Item {
     property bool active: false
     property real maskP: 0
 
+    /**
+     * A missing or failed grab still counts as ready. The reveal is gated on this,
+     * so a grim that returned nothing (output already off at lid-close, disk full,
+     * no permission) used to leave the surface mounted but never opened: the
+     * session was locked, but the password field never appeared.
+     */
     readonly property bool overlayReady: deskOverlay.status === Image.Ready
+        || deskOverlay.status === Image.Error
+        || surface.shotSource.length === 0
     readonly property bool shouldOpen: active && overlayReady
     onShouldOpenChanged: if (shouldOpen)
         openAnim.restart()

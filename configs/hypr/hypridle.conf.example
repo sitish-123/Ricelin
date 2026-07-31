@@ -1,7 +1,10 @@
 general {
     lock_cmd = /home/erik/.config/hypr/scripts/lock.sh
     before_sleep_cmd = loginctl lock-session
-    after_sleep_cmd = hyprctl dispatch dpms on
+    after_sleep_cmd = hyprctl eval 'return hl.dsp.dpms("on")'
+    # Wait for the compositor to confirm the lock before letting the
+    # machine suspend. Without this the lid closes on an unlocked session.
+    inhibit_sleep = 3
 }
 
 listener {
@@ -11,6 +14,6 @@ listener {
 
 listener {
     timeout = 360
-    on-timeout = hyprctl dispatch dpms off
-    on-resume = hyprctl dispatch dpms on
+    on-timeout = hyprctl eval 'return hl.dsp.dpms("off")'
+    on-resume = hyprctl eval 'return hl.dsp.dpms("on")'
 }

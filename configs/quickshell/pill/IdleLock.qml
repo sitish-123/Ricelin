@@ -53,7 +53,14 @@ SettingsSurface {
         var out = "general {\n"
             + "    lock_cmd = " + root.lockScript + "\n"
             + "    before_sleep_cmd = loginctl lock-session\n"
-            + "    after_sleep_cmd = hyprctl dispatch dpms on\n"
+            + "    after_sleep_cmd = hyprctl eval 'return hl.dsp.dpms(\"on\")'\n"
+            // Hold the sleep inhibitor until the compositor reports the session
+            // actually locked. hypridle spawns before_sleep_cmd with runAsync and
+            // releases the inhibitor immediately, so on the default (2 = auto,
+            // which only waits when the command mentions hyprlock) the machine
+            // suspended while the lock was still starting -- closing the lid left
+            // the session unlocked and the lock only appeared on resume.
+            + "    inhibit_sleep = 3\n"
             + "}\n";
 
         if (Flags.idleLockMin > 0)
@@ -65,8 +72,8 @@ SettingsSurface {
         if (Flags.idleScreenOffMin > 0)
             out += "\nlistener {\n"
                 + "    timeout = " + (Flags.idleScreenOffMin * 60) + "\n"
-                + "    on-timeout = hyprctl dispatch dpms off\n"
-                + "    on-resume = hyprctl dispatch dpms on\n"
+                + "    on-timeout = hyprctl eval 'return hl.dsp.dpms(\"off\")'\n"
+                + "    on-resume = hyprctl eval 'return hl.dsp.dpms(\"on\")'\n"
                 + "}\n";
 
         if (Flags.idleSuspendMin > 0)
