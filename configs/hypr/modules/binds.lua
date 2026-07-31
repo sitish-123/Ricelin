@@ -78,23 +78,57 @@ hl.bind("ALT + F4", hl.dsp.exec_cmd(
     { non_consuming = true })
 
 -- ── Workspaces ─────────────────────────────────────────────────────────────
+-- Positional, not absolute: SUPER+N goes to the Nth workspace that EXISTS.
+--
+-- Workspaces are destroyed when they empty, so absolute ids go sparse (4, 7, 8) and the
+-- navigation models stop agreeing: SUPER+5 would create and enter an empty ws 5, `r+1`
+-- would walk into the gaps, while the trackpad swipe and the scrolloverview carousel
+-- only ever see open workspaces -- making the gaps reachable by key and unreachable by
+-- gesture. Indexing by position lines the keys up with the swipe and the carousel; an
+-- empty workspace now only appears when SUPER+N asks for one.
+--
+-- The cost is that the mapping shifts as workspaces come and go: SUPER+3 is "the third
+-- one", not "the browser one". `scripts/ws-index.sh` resolves the position each time.
+--
 -- SHIFT and ALT both send a window to a workspace: SHIFT is Ricelin's, ALT is
 -- what the old setup used. Keeping both costs nothing and neither is displaced.
+local wsIndex = script("ws-index.sh")
+
 for i = 1, 10 do
     local key = (i == 10) and "0" or tostring(i)
-    hl.bind(mod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i, follow = false }))
-    hl.bind(mod .. " + ALT + " .. key,   hl.dsp.window.move({ workspace = i, follow = false }))
+    hl.bind(mod .. " + " .. key,         hl.dsp.exec_cmd(wsIndex .. " focus " .. i))
+    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.exec_cmd(wsIndex .. " move " .. i))
+    hl.bind(mod .. " + ALT + " .. key,   hl.dsp.exec_cmd(wsIndex .. " move " .. i))
 end
 
-hl.bind("CTRL + " .. mod .. " + Left",   hl.dsp.focus({ workspace = "r-1" }))
-hl.bind("CTRL + " .. mod .. " + Right",  hl.dsp.focus({ workspace = "r+1" }))
-hl.bind(mod .. " + Page_Up",             hl.dsp.focus({ workspace = "r-1" }))
-hl.bind(mod .. " + Page_Down",           hl.dsp.focus({ workspace = "r+1" }))
-hl.bind(mod .. " + mouse_up",            hl.dsp.focus({ workspace = "r-1" }))
-hl.bind(mod .. " + mouse_down",          hl.dsp.focus({ workspace = "r+1" }))
-hl.bind(mod .. " + SHIFT + Page_Up",     hl.dsp.window.move({ workspace = "r-1" }))
-hl.bind(mod .. " + SHIFT + Page_Down",   hl.dsp.window.move({ workspace = "r+1" }))
+-- SUPER+N is the only way to get a workspace that does not exist yet; it lands after the
+-- last one so it shows up at the end of the carousel instead of backfilling a gap.
+hl.bind(mod .. " + N",                   hl.dsp.exec_cmd(wsIndex .. " new"))
+hl.bind(mod .. " + SHIFT + N",           hl.dsp.exec_cmd(wsIndex .. " movenew"))
+
+-- m±1 (open workspaces on this monitor), not r±1 (raw numbers): r±1 steps into the gaps,
+-- which is exactly the inconsistency above. These now step the same sequence the swipe does.
+hl.bind("CTRL + " .. mod .. " + Left",   hl.dsp.focus({ workspace = "m-1" }))
+hl.bind("CTRL + " .. mod .. " + Right",  hl.dsp.focus({ workspace = "m+1" }))
+hl.bind(mod .. " + Page_Up",             hl.dsp.focus({ workspace = "m-1" }))
+hl.bind(mod .. " + Page_Down",           hl.dsp.focus({ workspace = "m+1" }))
+hl.bind(mod .. " + mouse_up",            hl.dsp.focus({ workspace = "m-1" }))
+hl.bind(mod .. " + mouse_down",          hl.dsp.focus({ workspace = "m+1" }))
+hl.bind(mod .. " + SHIFT + Page_Up",     hl.dsp.window.move({ workspace = "m-1" }))
+hl.bind(mod .. " + SHIFT + Page_Down",   hl.dsp.window.move({ workspace = "m+1" }))
+
+-- Send the focused window one workspace left/right, and "insert" it into a brand new
+-- workspace slotted next to the current one. These work INSIDE the scrolloverview overview
+-- too: with no `scrolloverview` submap defined, the plugin only swallows bare arrows (which
+-- move the card selection) and Enter, and passes modified keys through -- so these reach
+-- Hyprland normally, act on the selected card's window, and the overview stays open and
+-- re-animates. Dragging a window between cards with the touchpad also works, but needs
+-- input:touchpad:drag_lock (set in modules/input.lua) to survive lifting a finger.
+-- follow = false, so you keep watching the card you are on while the window flies out.
+hl.bind("CTRL + " .. mod .. " + SHIFT + Left",  hl.dsp.window.move({ workspace = "m-1", follow = false }))
+hl.bind("CTRL + " .. mod .. " + SHIFT + Right", hl.dsp.window.move({ workspace = "m+1", follow = false }))
+hl.bind("ALT + " .. mod .. " + SHIFT + Left",   hl.dsp.exec_cmd(wsIndex .. " insert left"))
+hl.bind("ALT + " .. mod .. " + SHIFT + Right",  hl.dsp.exec_cmd(wsIndex .. " insert right"))
 
 -- ── Special workspaces ─────────────────────────────────────────────────────
 -- SUPER+S keeps its old "scratchpad" feel; Ricelin calls the same idea "stash".

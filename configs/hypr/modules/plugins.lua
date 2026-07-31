@@ -11,23 +11,37 @@
 -- hl.plugin.scrolloverview.* table the plugin registers once loaded.
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- hyprpm builds into /var/cache/hyprpm/<user>/<repo>/<plugin>.so. Nothing in
--- the session loads it for us, so without this the plugin is gone after a
--- reboot even though `hyprpm list` still reports it enabled.
-local function plugin_path(repo, name)
-    local user = os.getenv("USER") or os.getenv("LOGNAME")
-    return "/var/cache/hyprpm/" .. tostring(user) .. "/" .. repo .. "/" .. name .. ".so"
-end
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DO NOT call hl.plugin.load() from this file.
+--
+-- 2026-07-31: this file used to load scrolloverview by hardcoded .so path.
+-- Loading a plugin mid-parse makes Hyprland re-parse the config, which reaches
+-- the load call again: reload -> handlePluginLoads -> postConfigReload ->
+-- reload -> ... until the process dies. Confirmed in three coredumps
+-- (SIGSEGV on stack exhaustion, and once SIGSEGV in luaL_alloc on heap
+-- exhaustion). SDDM surfaced it as `ERROR_INTERNAL "Process crashed"`, so it
+-- looked like a login failure -- it was the compositor dying on startup, and
+-- the machine could not be booted into Hyprland at all.
+--
+-- The `pcall` below does not protect against this: the recursion is in
+-- Hyprland's C++ config manager, not a catchable Lua error.
+--
+-- Plugins are loaded by `hyprpm reload -n` from modules/autostart.lua, out of
+-- band once the compositor is up. hyprpm also resolves the real build path and
+-- refuses an .so built against a different Hyprland ABI, neither of which a
+-- hardcoded path does.
+-- ═══════════════════════════════════════════════════════════════════════════
 
 -- ── scrolloverview ─────────────────────────────────────────────────────────
 -- https://github.com/yayuuu/hyprland-scroll-overview
+--
+-- On the first parse of a fresh session the plugin is not loaded yet, so this
+-- block no-ops. hyprpm's load then triggers one config reload, and on that
+-- second pass hl.plugin.scrolloverview exists and the settings below apply.
+-- That reload terminates because nothing here loads a plugin.
 pcall(function()
-    if not (hl.plugin and hl.plugin.scrolloverview) then
-        pcall(hl.plugin.load, plugin_path("hyprland-scroll-overview", "scrolloverview"))
-    end
-
     local so = hl.plugin and hl.plugin.scrolloverview
-    if not so then return end -- not built for this Hyprland version; skip quietly
+    if not so then return end -- not loaded (or not built for this Hyprland); skip quietly
 
     so.configure({
         -- Travel that counts as a full gesture. Matches the native
@@ -71,4 +85,16 @@ pcall(function()
     -- Keyboard fallback, so the overview is still reachable with the gesture
     -- commented out or on an external keyboard with no touchpad.
     hl.bind("CTRL + SUPER + O", so.overview("toggle"))
+
+    -- Four fingers horizontal navigates the carousel continuously (1:1 with the finger,
+    -- snapping to the nearest card on release). Outside the overview this gesture forwards
+    -- to a native workspace swipe, so it replaces the `hl.gesture({fingers = 4, direction =
+    -- "horizontal", action = "workspace"})` that used to live in modules/input.lua -- both
+    -- cannot be registered at once.
+    --
+    -- Fork-only action (~/Projects/scroll-overview). Stock scrolloverview raises on it, so
+    -- this goes LAST in the block: the pcall swallows the error and everything above has
+    -- already been applied. On a stock build the 4-finger horizontal swipe simply does
+    -- nothing until the line in modules/input.lua is restored.
+    so.gesture({ fingers = 4, direction = "horizontal", action = "navigate" })
 end)

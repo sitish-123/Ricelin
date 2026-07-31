@@ -17,6 +17,11 @@ hl.animation({ leaf = "global",     enabled = true, speed = 4.2,   bezier = "pil
 hl.animation({ leaf = "windows",    enabled = true, speed = 4.2,   bezier = "pillMorph" })
 hl.animation({ leaf = "windowsIn",  enabled = true, speed = 4.2,   bezier = "pillMorph", style = "popin 92%" })
 hl.animation({ leaf = "windowsOut", enabled = true, speed = 4.2, bezier = "pillMorph", style = "popin 92%" })
+-- windowsMove is a child of `windows` but does not inherit its speed here: `hyprctl animations`
+-- reported it as speed 0.0, i.e. instant. That is why a window dropped onto another workspace card
+-- in the scrolloverview overview teleported instead of gliding -- there was no movement animation to
+-- run. It also covers ordinary tiling moves and swaps.
+hl.animation({ leaf = "windowsMove", enabled = true, speed = 4.2, bezier = "pillMorph" })
 hl.animation({ leaf = "border",     enabled = true, speed = 4.2,   bezier = "quick" })
 hl.animation({ leaf = "fade",       enabled = true, speed = 4.2, bezier = "almostLinear" })
 hl.animation({ leaf = "fadeIn",     enabled = true, speed = 4.2, bezier = "almostLinear" })

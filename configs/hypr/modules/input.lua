@@ -3,12 +3,19 @@ hl.config({
         kb_layout          = "us",
         follow_mouse       = 1,
         sensitivity        = 0,
-        accel_profile      = "flat",
+        accel_profile      = "adaptive",
         repeat_rate        = 40,
         repeat_delay       = 400,
         numlock_by_default = false,
         touchpad = {
             natural_scroll = true,
+            -- 1 = drag-lock with timeout. Without it (0) lifting a finger ends the drag,
+            -- which makes dragging a window between scrolloverview cards nearly impossible:
+            -- that is ~870px of cursor travel at scale 0.35, more than one stroke on this
+            -- touchpad, so the drag dies as soon as you reposition. With the timeout variant
+            -- a lift keeps the button held briefly instead of dropping the window, and still
+            -- releases on its own -- no sticky state to get stuck in (2 would be sticky).
+            drag_lock      = 1,
         },
     },
     cursor = {
@@ -37,5 +44,11 @@ hl.config({
 --
 -- Valid directions: horizontal, vertical, up, down, left, right, pinch, swipe.
 -- Valid actions:    workspace, move, resize, close, fullscreen, special, float.
-hl.gesture({ fingers = 4, direction = "horizontal", action = "workspace" })
-hl.gesture({ fingers = 3, direction = "swipe",      action = "move" })
+-- 4-finger horizontal is NOT registered here. It is registered by scrolloverview in
+-- modules/plugins.lua as action = "navigate", which falls back to this exact native
+-- workspace swipe when no overview is open, and drives the overview's continuous
+-- carousel when one is. Registering both is impossible: Hyprland's gesture manager
+-- rejects a second gesture on the same finger count + axis, and with the native one
+-- winning, a swipe inside the overview did a hard +1/-1 workspace switch (which also
+-- closed the overview) instead of following the finger.
+hl.gesture({ fingers = 3, direction = "swipe", action = "move" })
