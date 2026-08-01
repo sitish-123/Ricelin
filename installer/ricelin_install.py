@@ -748,11 +748,14 @@ def run(args):
         if do_pkgs:
             family = info["family"]
 
-            # a. refresh the package index first so a stale list never sinks the run.
+            # a. sync the system first. On rolling distros (Arch, Tumbleweed) this is
+            #    a full upgrade, not a bare refresh: installing a new package against a
+            #    refreshed-but-not-upgraded system is a partial upgrade (see
+            #    pkg.refresh_argv). apt/dnf get a metadata refresh.
             refresh_env = pkg.INSTALL_ENV if family == "debian" else None
             ok, detail = _run(pkg.refresh_argv(family), dry, env=refresh_env)
-            record(ok, detail, "Refresh package index",
-                   "Update the package list yourself, then re-run.")
+            record(ok, detail, "Update the system",
+                   "Update your system yourself (e.g. sudo pacman -Syu), then re-run.")
 
             # b. bootstrap an AUR helper on Arch when one is wanted but missing.
             if family == "arch" and choices["aur_choice"] != "none" and pkg.aur_helper() is None:

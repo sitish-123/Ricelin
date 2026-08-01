@@ -163,19 +163,31 @@ def enable_repo_argv(repo, family):
     raise ValueError(f"cannot enable repo {repo!r} on family {family!r}")
 
 
-def refresh_argv(family):
+def refresh_argv(family, os_release_path="/etc/os-release"):
     """
-    The package-list refresh command for this family, run once before any installs
-    so a stale index never sinks the first install. pacman folds the refresh into
-    -Sy; the rpm and apt families have a dedicated metadata step.
+    The pre-install system-sync command for this family, run once before any
+    installs so a stale index never sinks the first install.
+
+    On a rolling distro this MUST be a full upgrade, not a bare metadata refresh.
+    `pacman -Sy` (or a plain `zypper refresh`) followed by installing a fresh
+    package is a partial upgrade: the new package links against library versions
+    newer than the ones still on disk, which the Arch and openSUSE-Tumbleweed docs
+    both call out as a way to break the system. So Arch does `-Syu` and Tumbleweed
+    does `dup`. apt and dnf resolve dependencies at install time and pull whatever
+    the new package needs, so a metadata refresh is enough there; a full upgrade
+    would be a heavier, more surprising change than ricing warrants.
     """
     _require_family(family)
     if family == "arch":
-        return ["sudo", "pacman", "-Sy"]
+        return ["sudo", "pacman", "-Syu", "--noconfirm"]
     if family == "debian":
         return ["sudo", "apt-get", "update"]
     if family == "fedora":
         return ["sudo", "dnf", "makecache"]
+    # openSUSE: Tumbleweed rolls, so it needs a dist-upgrade for the same
+    # partial-upgrade reason as Arch; Leap is fixed-release, a refresh suffices.
+    if _obs_build_target(os_release_path) == "openSUSE_Tumbleweed":
+        return ["sudo", "zypper", "--non-interactive", "dup"]
     return ["sudo", "zypper", "--non-interactive", "refresh"]
 
 
@@ -278,10 +290,15 @@ def _selftest():
     assert obs[1] == ["zypper", "--non-interactive", "--gpg-auto-import-keys", "refresh"]
     checks += 2
 
-    assert refresh_argv("arch") == ["sudo", "pacman", "-Sy"]
+    # Rolling distros get a full upgrade (never a partial one); apt/dnf get a
+    # metadata refresh. openSUSE splits on edition: Leap refreshes, Tumbleweed dups.
+    assert refresh_argv("arch") == ["sudo", "pacman", "-Syu", "--noconfirm"]
     assert refresh_argv("debian") == ["sudo", "apt-get", "update"]
     assert refresh_argv("fedora") == ["sudo", "dnf", "makecache"]
-    assert refresh_argv("suse") == ["sudo", "zypper", "--non-interactive", "refresh"]
+    suse_leap = _write_os_release({"ID": "opensuse-leap", "VERSION_ID": "15.6"})
+    suse_tw = _write_os_release({"ID": "opensuse-tumbleweed", "VERSION_ID": "20260626"})
+    assert refresh_argv("suse", suse_leap) == ["sudo", "zypper", "--non-interactive", "refresh"]
+    assert refresh_argv("suse", suse_tw) == ["sudo", "zypper", "--non-interactive", "dup"]
     checks += 4
 
     assert INSTALL_ENV == {"DEBIAN_FRONTEND": "noninteractive"}
