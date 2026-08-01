@@ -85,6 +85,10 @@ fetch() {
 	mkdir -p "$(dirname "$DIR")"
 	if [ -d "$DIR/.git" ]; then
 		step "Updating Ricelin in $DIR"
+		# Repoint an existing clone at the current REPO_URL first, so a checkout
+		# made from a different remote (e.g. upstream before this fork) pulls from
+		# here instead of forever fast-forwarding the old origin.
+		git -C "$DIR" remote set-url origin "$REPO_URL" 2>/dev/null || true
 		git -C "$DIR" pull --ff-only || say "  could not fast-forward, using the current checkout"
 	else
 		step "Cloning Ricelin into $DIR"

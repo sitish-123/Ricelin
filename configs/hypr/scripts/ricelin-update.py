@@ -156,6 +156,10 @@ def ensure_clone(remote, do_fetch):
     """Clone the pristine mirror if missing, otherwise fetch. Returns the clone path."""
     clone = data_dir()
     if (clone / ".git").exists():
+        # Repoint a mirror cloned against a different remote -- e.g. one made from
+        # upstream before this fork migration -- so it follows the current
+        # DEFAULT_REMOTE instead of silently fetching the old origin forever.
+        git(clone, "remote", "set-url", "origin", remote)
         if do_fetch:
             git(clone, "fetch", "origin", "main")
         return clone
