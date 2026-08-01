@@ -33,7 +33,8 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ── scrolloverview ─────────────────────────────────────────────────────────
--- https://github.com/yayuuu/hyprland-scroll-overview
+-- Fork: https://github.com/sitish-kumar/hyprland-scroll-overview
+-- Upstream: https://github.com/yayuuu/hyprland-scroll-overview
 --
 -- On the first parse of a fresh session the plugin is not loaded yet, so this
 -- block no-ops. hyprpm's load then triggers one config reload, and on that

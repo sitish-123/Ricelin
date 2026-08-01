@@ -269,7 +269,7 @@ def banner():
             width,
         )
     )
-    lines.append(_clip([("", "  "), (FAINT, "github.com/Gakuseei/Ricelin")], width))
+    lines.append(_clip([("", "  "), (FAINT, "github.com/sitish-kumar/Ricelin")], width))
     lines.append("")
     lines.append(_header(INTRO, VERM, "Ricelin installer", CREAM, width))
     lines.append(_spacer(width))

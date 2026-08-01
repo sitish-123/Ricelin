@@ -28,7 +28,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-DEFAULT_REMOTE = "https://github.com/Gakuseei/Ricelin.git"
+DEFAULT_REMOTE = "https://github.com/sitish-kumar/Ricelin.git"
 
 PROTECTED = [
     "hypr/modules/decoration.lua",
