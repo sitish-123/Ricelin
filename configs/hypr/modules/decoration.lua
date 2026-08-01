@@ -42,11 +42,39 @@ hl.config({
         },
         blur = {
             enabled           = true,
-            size              = 8,
-            passes            = 3,
+            size              = 6,
+            passes            = 2,
             vibrancy          = 0.17,
             noise             = 0.01,
             new_optimizations = true,
         },
     },
 })
+
+--[[
+    Damage tracking off, deliberately.
+
+    Hyprland only re-renders the damaged rect. The pill is one fullscreen
+    layer surface that commits partial damage as it morphs, so the blur
+    behind it gets composited from stale framebuffer content: the panel
+    opens flat and opaque, then snaps to blurred+translucent one frame
+    later, ~350ms in. Measured at 144fps -- a single-frame step, not an
+    animation. Disabling the pill's blur removes the step; forcing
+    layer.enabled or stretching Motion.morph does not, so it is the
+    compositor, not the shell.
+
+    LEFT AT 2, Hyprland's default -- meaning the step above is NOT fixed, it
+    is an accepted artifact. 1 (whole-monitor, redraws only on change) fixes
+    it for a modest cost and 0 (full redraw every frame) fixes it for a large
+    one; both were tried and neither was worth it. Set to 1 if it ever is.
+
+    Unrelated, do not conflate: this laptop's Samsung ATNA40CU09-0 OLED also
+    shifts brightness between a moving and a static screen. That one is the
+    panel (PSR / ASBL), not the compositor -- a framebuffer capture shows
+    byte-identical frames across it. damage_tracking = 0 masks it only by
+    never letting the screen go static, which is a bad trade.
+
+    xray would be the cheap fix and must stay off: it samples only the
+    cached wallpaper, which is exactly what stops the pill reading as glass.
+]]
+hl.config({ debug = { damage_tracking = 2 } })
