@@ -17,6 +17,10 @@ import "Singletons"
  * monitors.lua splitting 1-5 / 6-10 across two screens) always shows every
  * assigned dot while a workspace outside the rules (r+1 past the last ruled
  * one) still appears instead of vanishing from the strip.
+ *
+ * The strip itself is a fixed-width viewport (see `scrollX`): dots slide and
+ * the active one centres, so the host pill keeps a constant width no matter how
+ * many workspaces currently exist.
  */
 Item {
     id: workspaces
@@ -98,73 +102,143 @@ Item {
     readonly property int activeIndex: range.indexOf(parseInt(activeName))
 
     /**
-     * Centre x of a dot slot from target layout widths (active stick is wider).
-     * Uses the animation end values, so a focus marker aimed here lands where
-     * the dot settles and doesn't chase the width Behavior.
+     * How many slots the fixed viewport is cut to hold: one active stick plus
+     * `visibleSlots - 1` dots. Six covers the usual spread with headroom, so the
+     * strip only actually scrolls on a genuinely busy session.
      */
-    function slotCenterX(idx) {
+    property int visibleSlots: 6
+    readonly property real slotPitch: dotW + gap
+    readonly property real viewportW: stickW + (visibleSlots - 1) * slotPitch
+
+    /** Row width at target layout values -- (n-1) dots and gaps plus the stick. */
+    readonly property real contentW: {
+        const n = range.length;
+        return n <= 0 ? 0 : (n - 1) * slotPitch + (activeIndex >= 0 ? stickW : dotW);
+    }
+
+    /**
+     * Centre x of a dot slot in *content* space, from target layout widths (the
+     * active stick is wider). Uses the animation end values, so a focus marker
+     * aimed here lands where the dot settles and doesn't chase the width
+     * Behavior. Kept separate from slotCenterX because scrollX is derived from
+     * it -- going through the offset version would bind scrollX to itself.
+     */
+    function contentCenterX(idx) {
         let x = 0;
         for (let i = 0; i < idx; i++)
             x += (i === activeIndex ? stickW : dotW) + gap;
         return x + (idx === activeIndex ? stickW : dotW) / 2;
     }
 
+    /**
+     * The strip is a fixed-width viewport that the dots slide inside, rather
+     * than a row the pill sizes itself around. Hyprland garbage-collects an
+     * empty workspace the moment you leave it, so a content-width strip made
+     * the whole pill breathe by a slot (dotW + gap) every time you swiped off
+     * a scratch workspace onto a real one -- the width jitter was tracking
+     * workspace *existence*, not anything the user did.
+     *
+     * Under the viewport width the whole row is centred and nothing moves. Over
+     * it the active dot is pulled to the centre and the row is clamped so it
+     * never scrolls past either end into dead space.
+     */
+    readonly property real scrollTarget: {
+        void workspaces.range;
+        void workspaces.activeIndex;
+        void workspaces.stickW;
+        void workspaces.dotW;
+        void workspaces.gap;
+        const vw = viewportW;
+        if (contentW <= vw)
+            return (vw - contentW) / 2;
+        const centred = vw / 2 - contentCenterX(Math.max(0, activeIndex));
+        return Math.min(0, Math.max(vw - contentW, centred));
+    }
+
+    /** Bound, not readonly: `Behavior on` cannot attach to a readonly property. */
+    property real scrollX: scrollTarget
+
+    Behavior on scrollX {
+        NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard }
+    }
+
+    /** Slot centre in this item's own coords, i.e. after the scroll offset. */
+    function slotCenterX(idx) {
+        return scrollX + contentCenterX(idx);
+    }
+
     readonly property point activeDotPoint: {
         void workspaces.activeName;
         void workspaces.width;
+        void workspaces.scrollX;
         return Qt.point(slotCenterX(Math.max(0, activeIndex)), height / 2);
     }
 
-    implicitWidth: row.implicitWidth
+    implicitWidth: viewportW
     implicitHeight: row.implicitHeight
 
-    RowLayout {
-        id: row
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: workspaces.gap
+    /**
+     * Clips horizontally only. Qt honours clipping when it routes input too, so
+     * a viewport flush with the strip would have cropped each slot's MouseArea
+     * back to the 22px dot row and thrown away the generous vertical hit area
+     * those negative margins buy. Bleeding the clip 8px past top and bottom
+     * keeps the targets while still cutting the dots off at the sides.
+     */
+    Item {
+        id: viewport
+        anchors.fill: parent
+        anchors.topMargin: -8 * workspaces.s
+        anchors.bottomMargin: -8 * workspaces.s
+        clip: true
 
-        Repeater {
-            model: workspaces.range
+        RowLayout {
+            id: row
+            x: workspaces.scrollX
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: workspaces.gap
 
-            delegate: Item {
-                id: slot
+            Repeater {
+                model: workspaces.range
 
-                required property var modelData
-                required property int index
+                delegate: Item {
+                    id: slot
 
-                readonly property string wsName: String(modelData)
-                readonly property bool isActive: workspaces.activeName === wsName
+                    required property var modelData
+                    required property int index
 
-                Layout.preferredWidth: slot.isActive ? workspaces.stickW : workspaces.dotW
-                Layout.preferredHeight: 22 * workspaces.s
-                Behavior on Layout.preferredWidth { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
+                    readonly property string wsName: String(modelData)
+                    readonly property bool isActive: workspaces.activeName === wsName
 
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width
-                    height: workspaces.dotW
-                    radius: height / 2
-                    color: slot.isActive ? Theme.vermLit : Theme.cream
-                    opacity: slot.isActive ? 1.0 : (area.containsMouse ? 0.7 : 0.3)
-                    Behavior on opacity { NumberAnimation { duration: Motion.fast } }
-                }
+                    Layout.preferredWidth: slot.isActive ? workspaces.stickW : workspaces.dotW
+                    Layout.preferredHeight: 22 * workspaces.s
+                    Behavior on Layout.preferredWidth { NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard } }
 
-                MouseArea {
-                    id: area
-                    anchors.fill: parent
-                    anchors.leftMargin: -workspaces.gap / 2
-                    anchors.rightMargin: -workspaces.gap / 2
-                    anchors.topMargin: -8 * workspaces.s
-                    anchors.bottomMargin: -8 * workspaces.s
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Hyprland.dispatch('hl.dsp.focus({workspace="' + slot.wsName + '"})')
-                    onContainsMouseChanged: {
-                        if (containsMouse)
-                            workspaces.hoverIndex = slot.index;
-                        else if (workspaces.hoverIndex === slot.index)
-                            workspaces.hoverIndex = -1;
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: parent.width
+                        height: workspaces.dotW
+                        radius: height / 2
+                        color: slot.isActive ? Theme.vermLit : Theme.cream
+                        opacity: slot.isActive ? 1.0 : (area.containsMouse ? 0.7 : 0.3)
+                        Behavior on opacity { NumberAnimation { duration: Motion.fast } }
+                    }
+
+                    MouseArea {
+                        id: area
+                        anchors.fill: parent
+                        anchors.leftMargin: -workspaces.gap / 2
+                        anchors.rightMargin: -workspaces.gap / 2
+                        anchors.topMargin: -8 * workspaces.s
+                        anchors.bottomMargin: -8 * workspaces.s
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Hyprland.dispatch('hl.dsp.focus({workspace="' + slot.wsName + '"})')
+                        onContainsMouseChanged: {
+                            if (containsMouse)
+                                workspaces.hoverIndex = slot.index;
+                            else if (workspaces.hoverIndex === slot.index)
+                                workspaces.hoverIndex = -1;
+                        }
                     }
                 }
             }
