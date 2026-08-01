@@ -110,13 +110,13 @@ screenshot tool) makes sense; grab it from [rishot](https://github.com/Gakuseei/
 The installer backs up anything it replaces: `~/.config/hypr`, `quickshell`, `kitty`
 and friends move to `<name>.bak` before Ricelin's copies go in. Symlinked configs are
 moved aside as-is, not written through, so an existing symlinked dotfiles repo is left
-untouched. Two things it does **not** clean up, worth doing by hand if you came from
-another rice:
+untouched. Your own state — pill settings, wallpaper, calendar, screen vibrance — lives
+in `~/.local/state/ricelin/`, which the installer never touches.
 
-- **Old hyprpm plugins stay enabled.** Ricelin adds and enables its own overview plugin
-  but never disables others. If your previous setup enabled a different overview plugin
-  (e.g. `hyprtasking`), both load on next login and fight. Disable the old one:
-  `hyprpm disable <name>` (or `hyprpm remove <repo>`), then `hyprpm reload -n`.
+- **Conflicting overview plugins are turned off for you.** Ricelin enables its own
+  overview plugin through hyprpm and disables known conflicts a previous setup left on
+  (e.g. `hyprtasking` from an ii setup), so you don't end up loading two at once. Nothing
+  is removed — re-enable one any time with `hyprpm enable <name> && hyprpm reload -n`.
 - **Configs Ricelin doesn't manage are left as they were** — a leftover `~/.config/matugen`
   or `~/.config/illogical-impulse` from an ii setup, for instance. Ricelin drives matugen
   through the CLI and ignores those directories, so they're harmless, but you can delete

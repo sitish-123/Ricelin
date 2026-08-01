@@ -439,6 +439,14 @@ HYPR_PLUGINS = (
      ("scrolloverview",)),
 )
 
+# Overview plugins from other setups that would fight ours for the same gestures and
+# state if both were left enabled. A machine migrating from an earlier rice -- notably
+# the illogical-impulse (ii) setup, which enabled hyprtasking through hyprpm -- would
+# otherwise load two overview plugins at once. We disable these so only the shipped
+# scrolloverview drives the overview. Nothing is removed, so re-enabling one later is a
+# single `hyprpm enable`.
+CONFLICTING_PLUGINS = ("hyprtasking",)
+
 
 def setup_hypr_plugins(dry):
     """
@@ -466,6 +474,8 @@ def setup_hypr_plugins(dry):
             print(f"  would add hyprpm repo: {name} ({url})")
             for plugin in plugins:
                 print(f"  would enable plugin: {plugin}")
+        for plugin in CONFLICTING_PLUGINS:
+            print(f"  would disable conflicting plugin if present: {plugin}")
         return True, "", notes
 
     # hyprpm escalates itself to write /var/cache/hyprpm. On a full install the sudo
@@ -502,6 +512,21 @@ def setup_hypr_plugins(dry):
             ok, detail = _run(["hyprpm", "enable", plugin], dry)
             if not ok:
                 return True, "", [f"Could not enable {plugin} ({detail}). " + manual]
+
+    # Turn off any conflicting overview plugin a previous setup left enabled (see
+    # CONFLICTING_PLUGINS). `hyprpm list` above is the state before our add, so a
+    # pre-existing hyprtasking shows there. Non-fatal: a leftover we could not disable
+    # just gets a note telling the user the one-liner to run.
+    for plugin in CONFLICTING_PLUGINS:
+        if plugin not in listed:
+            continue
+        ok, detail = _run(["hyprpm", "disable", plugin], dry)
+        if ok:
+            notes.append(f"Disabled a conflicting overview plugin left enabled from a previous "
+                         f"setup: {plugin}. Re-enable it with: hyprpm enable {plugin}")
+        else:
+            notes.append(f"Could not disable the conflicting plugin {plugin} ({detail}); if the "
+                         f"overview misbehaves, run: hyprpm disable {plugin} && hyprpm reload -n")
 
     notes.append("Hyprland plugins are enabled via hyprpm; they load on the next login. "
                  "To load them now: hyprpm reload -n")
