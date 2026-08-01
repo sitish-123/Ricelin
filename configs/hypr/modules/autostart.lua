@@ -1,4 +1,11 @@
 hl.on("hyprland.start", function()
+    -- Load hyprpm-managed plugins. This MUST happen out here, after the
+    -- compositor is up -- never via hl.plugin.load() inside the config, which
+    -- re-enters the parse (reload -> handlePluginLoads -> postConfigReload ->
+    -- reload) and hard-crashes Hyprland into an unbootable SDDM loop. See
+    -- modules/plugins.lua for the full story.
+    hl.exec_cmd("hyprpm reload -n")
+
     hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/cliphist-watch.sh")
     hl.exec_cmd(os.getenv("HOME") .. "/.config/hypr/scripts/wallpaper.sh init")
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Ice 24")
