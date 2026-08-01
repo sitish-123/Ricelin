@@ -720,6 +720,12 @@ def run(args):
 
     needs_sudo = (do_pkgs or choices["sddm"] or choices.get("grub")
                   or choices["fish"] or choices["brave"]) and not dry
+    if needs_sudo:
+        # sudo prints its own bare "[sudo] password for ..." line, which reads as
+        # stray output next to the styled steps. This gutter hint points straight
+        # at it so the password handoff never looks like a hang.
+        tui.info(["Enter your password so Ricelin can install packages and set up "
+                  "your login, shell and boot theme. sudo won't echo as you type."])
     keepalive_stop = sudo_keepalive() if needs_sudo else None
     try:
         if do_pkgs:
