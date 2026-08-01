@@ -78,6 +78,29 @@ def lerp(x, x0, x1, y0, y1):
     return y0 + t * (y1 - y0)
 
 
+def brighten(hex_str, amount=0.16):
+    """Lift a colour's lightness for the bright half of the ANSI palette."""
+    r, g, b = (int(hex_str[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return tint(h, s, min(1.0, l + amount))
+
+
+def ansi16(b):
+    """
+    Map a base16 scheme onto the 16 ANSI slots.
+
+    base00..base07 is the greyscale ramp (background to foreground) and
+    base08..base0F is the chromatic set, so they are NOT a linear 0-15 run.
+    Feeding them straight through paints red/green/yellow/blue/magenta/cyan as
+    near-black greys, which makes ordinary coloured output unreadable on the
+    dark background. Slot them by meaning instead, and lift the bright half.
+    """
+    dark = [b["base00"], b["base08"], b["base0b"], b["base0a"],
+            b["base0d"], b["base0e"], b["base0c"], b["base05"]]
+    bright = [b["base03"]] + [brighten(c) for c in dark[1:7]] + [b["base07"]]
+    return dark + bright
+
+
 def render_fastfetch(pill):
     """
     Recolour the fastfetch readout from the same pill palette. fastfetch has no
@@ -162,6 +185,8 @@ def main():
         'return {\n    active = "%s",\n    inactive = "%s",\n}\n'
         % (pill["primary"], b["base01"]))
 
+    ansi = ansi16(b)
+
     lines = [
         f'background = {b["base00"]}',
         f'foreground = {b["base07"]}',
@@ -169,8 +194,8 @@ def main():
         f'selection-background = {b["base02"]}',
         f'selection-foreground = {b["base07"]}',
     ]
-    for i in range(16):
-        lines.append(f'palette = {i}={b["base%02x" % i]}')
+    for i, c in enumerate(ansi):
+        lines.append(f'palette = {i}={c}')
     (CACHE / "ghostty-colors").write_text("\n".join(lines) + "\n")
 
     # Same palette in kitty's syntax. kitty.conf includes this file, and kitty
@@ -183,8 +208,8 @@ def main():
         f'selection_background {b["base02"]}',
         f'selection_foreground {b["base07"]}',
     ]
-    for i in range(16):
-        klines.append(f'color{i} {b["base%02x" % i]}')
+    for i, c in enumerate(ansi):
+        klines.append(f'color{i} {c}')
     (CACHE / "kitty-colors.conf").write_text("\n".join(klines) + "\n")
 
     # Best-effort: no kitty running (or no pkill) is not an error.
