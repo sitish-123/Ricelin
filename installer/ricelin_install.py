@@ -501,7 +501,24 @@ def setup_hypr_plugins(dry):
         return False, f"{exc}: hyprpm list", notes
 
     for name, url, plugins in HYPR_PLUGINS:
-        if name not in listed:
+        # hyprpm derives the repo name from the last URL segment, so our fork
+        # (sitish-kumar/hyprland-scroll-overview) and upstream (yayuuu/...) collide
+        # on the same name. `hyprpm list` disambiguates by author -- it prints
+        # "Repository <name> (by <author>)" -- so match on name AND author. A bare
+        # `name in listed` check treats a pre-existing upstream build as ours and
+        # skips the add, leaving the shipped config's `navigate` gesture (fork-only)
+        # silently dead: the overview opens on 4-finger-up but horizontal does nothing.
+        author = url.rstrip("/").split("/")[-2]
+        ours_present = f"{name} (by {author})" in listed
+        if not ours_present:
+            # A same-named repo from a different author (upstream scrolloverview a
+            # previous rice or a manual install added) collides on the derived name,
+            # so `hyprpm add` would refuse. Evict the impostor first, then add ours.
+            if name in listed:
+                ok, detail = _run(["hyprpm", "remove", name], dry)
+                if not ok:
+                    return True, "", [f"Could not replace a conflicting {name} "
+                                      f"build ({detail}). " + manual]
             # hyprpm asks for confirmation before cloning and building third-party code.
             # Answer it non-interactively: this is a pinned repo the rice ships, and the
             # installer has no terminal to prompt on under `curl | bash`.
