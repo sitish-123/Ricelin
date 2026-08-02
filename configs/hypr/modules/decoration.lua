@@ -19,6 +19,10 @@ hl.config({
     misc = {
         disable_hyprland_logo    = true,
         disable_splash_rendering = true,
+        -- Follow xdg-activation focus requests (notification clicks, "open in
+        -- running app", browser link handoffs): switch to the window's
+        -- workspace and focus it instead of just marking it urgent.
+        focus_on_activate        = true,
     },
     general = {
         gaps_in     = 6,
