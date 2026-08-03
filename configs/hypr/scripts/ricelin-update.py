@@ -42,6 +42,7 @@ PROTECTED = [
     "hypr/modules/spaces.lua",
     "hypr/hypridle.conf",
     "fish/config.fish",
+    "kitty/kitty.conf",
 ]
 
 
@@ -261,13 +262,23 @@ def reconcile_protected(clone, config_root, manifest, head, apply, take):
     """
     Three-way merge each protected file against its recorded base sha. Returns the
     module report rows, the conflict list, and the manifest sha updates to commit on
-    apply. A file with no recorded base is skipped here and baselined by the caller.
+    apply.
+
+    A file with no per-module base falls back to the install-wide syncedSha, which
+    is the commit the live copy actually came from. This is what lets a file be
+    ADDED to PROTECTED later: baseline_modules only ever runs on first run, so on a
+    box that already has a syncedSha a newly protected file would otherwise carry no
+    base forever, and being protected it is skipped by sync_code too -- frozen at
+    whatever is on disk and absent from the report. Baselining at head instead of
+    syncedSha would be wrong in the other direction: any upstream change to the file
+    between syncedSha and head would be declared already-applied and silently lost.
+    A file that did not exist at syncedSha yields base None below and is skipped.
     """
     rows = []
     conflicts = []
     sha_updates = {}
     for rel in PROTECTED:
-        base_sha = manifest.get("modules", {}).get(rel)
+        base_sha = manifest.get("modules", {}).get(rel) or manifest.get("syncedSha")
         if not base_sha:
             continue
         new = show_at(clone, head, rel)

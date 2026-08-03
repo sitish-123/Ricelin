@@ -64,6 +64,7 @@ PRESERVED = [
     "hypr/modules/spaces.lua",
     "hypr/hypridle.conf",
     "fish/config.fish",
+    "kitty/kitty.conf",
 ]
 
 # The single auto monitor that replaces a user's hand-tuned layout. Their real

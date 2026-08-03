@@ -50,10 +50,12 @@ def main():
     binds = "configs/hypr/modules/binds.lua"
     monitors = "configs/hypr/modules/monitors.lua"
     pill = "configs/quickshell/pill/Look.qml"
+    kitty = "configs/kitty/kitty.conf"
 
     write(origin / binds, "bind one\nspacer\nspacer\nbind two\nspacer\nspacer\nbind three\n")
     write(origin / monitors, "monitor A\nspacer\nspacer\nmonitor B\nspacer\nspacer\ntail\n")
     write(origin / pill, "code v1\n")
+    write(origin / kitty, "kitty one\nspacer\nspacer\nkitty two\nspacer\nspacer\nkitty three\n")
     git(origin, "add", "-A")
     git(origin, "commit", "-q", "-m", "init")
 
@@ -67,6 +69,7 @@ def main():
 
     write(origin / binds, "bind one\nspacer\nspacer\nbind two changed upstream\nspacer\nspacer\nbind three\n")
     write(origin / monitors, "monitor A\nspacer\nspacer\nmonitor B\nspacer\nspacer\nmonitor C upstream\n")
+    write(origin / kitty, "kitty one\nspacer\nspacer\nkitty two changed upstream\nspacer\nspacer\nkitty three\n")
     git(origin, "add", "-A")
     git(origin, "commit", "-q", "-m", "config bump\n\nchangelog: new monitor preset")
 
@@ -74,6 +77,7 @@ def main():
     write(config / "hypr/modules/binds.lua", "bind one\nspacer\nspacer\nbind two\nspacer\nspacer\nbind three\n")
     write(config / "hypr/modules/monitors.lua", "monitor A\nspacer\nspacer\nmonitor B\nspacer\nspacer\ntail\n")
     write(config / "quickshell/pill/Look.qml", "stale local code\n")
+    write(config / "kitty/kitty.conf", "kitty one\nspacer\nspacer\nkitty two\nspacer\nspacer\nkitty three\n")
 
     first = ru.run("apply", str(origin), config, set(), set())
     assert first["status"] == "ok", first
@@ -138,6 +142,33 @@ def main():
     taken = ru.run("apply", str(origin), config, {binds[len("configs/"):]}, set())
     assert (config / "hypr/modules/binds.lua").read_text() == "bind one\nspacer\nspacer\nbind two changed upstream\nspacer\nspacer\nbind three\n"
     print("--take overwrites conflicting file: ok")
+
+    """
+    P1: a file ADDED to PROTECTED later carries no per-module base on a box that
+    already has a syncedSha, because baseline_modules only runs on first run. It
+    must fall back to syncedSha and merge, not freeze: protected files are skipped
+    by sync_code, so no fallback means the file is never updated and never reported.
+    Falling back to head instead would declare the pending upstream change already
+    applied and silently drop it.
+    """
+    krel = kitty[len("configs/"):]
+    m = json.loads(ru.manifest_path().read_text())
+    m["syncedSha"] = base_before_bump
+    m["modules"].pop(krel, None)          # newly protected: no recorded base
+    ru.manifest_path().write_text(json.dumps(m))
+    write(config / "kitty/kitty.conf",
+          "kitty one local\nspacer\nspacer\nkitty two\nspacer\nspacer\nkitty three\n")
+
+    adopted = ru.run("check", str(origin), config, set(), set())
+    kstates = {r["path"]: r["state"] for r in adopted["modules"]}
+    assert kstates.get(krel) == "merged", kstates
+
+    ru.run("apply", str(origin), config, set(), set())
+    kout = (config / "kitty/kitty.conf").read_text()
+    assert "kitty one local" in kout, kout          # local edit kept
+    assert "kitty two changed upstream" in kout, kout  # upstream change not lost
+    assert json.loads(ru.manifest_path().read_text())["modules"][krel] == head
+    print("P1 newly protected file -> syncedSha fallback merges, base recorded: ok")
 
     """
     C1: a quickshell-only symlink into a git work-tree is devmode. Without the fix
